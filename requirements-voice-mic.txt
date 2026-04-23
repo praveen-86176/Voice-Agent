@@ -1,0 +1,5 @@
+#
+# Optional extras for real microphone input on Linux.
+# You must install PortAudio system headers first (see README).
+#
+pyaudio>=0.2.14

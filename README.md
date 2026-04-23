@@ -67,6 +67,20 @@ brew install portaudio
 CPPFLAGS='-I/opt/homebrew/include' LDFLAGS='-L/opt/homebrew/lib' .venv/bin/pip install pyaudio
 ```
 
+### Microphone support (Linux / Render)
+
+If your deploy fails building `pyaudio` with `portaudio.h: No such file or directory`, install the system dependency first:
+
+```bash
+apt-get update && apt-get install -y portaudio19-dev
+```
+
+Then install the optional mic requirements:
+
+```bash
+.venv/bin/pip install -r requirements-voice-mic.txt
+```
+
 ## Environment variables
 
 Copy `.env.example` to `.env` and fill what you need.

@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 
-from config import CHROMA_DIR, EMBEDDING_PROVIDER, OPENAI_API_KEY, OPENAI_EMBEDDING_MODEL, SENTENCE_TRANSFORMER_MODEL
+from config import CHROMA_DIR, EMBEDDING_PROVIDER, SENTENCE_TRANSFORMER_MODEL
 
 
 class VectorMemoryIndex:
@@ -22,19 +22,10 @@ class VectorMemoryIndex:
             self.enabled = False
 
     def _embed(self, text: str) -> Optional[List[float]]:
-        if EMBEDDING_PROVIDER == "openai" and OPENAI_API_KEY:
-            try:
-                if self._openai_client is None:
-                    from openai import OpenAI  # type: ignore
-
-                    self._openai_client = OpenAI(api_key=OPENAI_API_KEY)
-                result = self._openai_client.embeddings.create(
-                    model=OPENAI_EMBEDDING_MODEL,
-                    input=text,
-                )
-                return result.data[0].embedding
-            except Exception:
-                return None
+        # OpenAI embeddings were removed when switching to Groq-only LLM config.
+        # Keep local embeddings as the default and only option here.
+        if EMBEDDING_PROVIDER == "openai":
+            return None
 
         try:
             if self._sentence_model is None:
