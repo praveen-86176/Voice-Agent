@@ -1,7 +1,7 @@
 import json
 from typing import Any, Dict, List, Tuple
 
-from config import LLM_PROVIDER, OPENAI_API_KEY, OPENAI_MODEL
+from config import GROQ_API_KEY, GROQ_MODEL, LLM_PROVIDER
 
 
 def _to_openai_tools(tool_schemas: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -28,15 +28,18 @@ def call_llm_with_tools(
     Returns (assistant_content, tool_calls).
     tool_calls format: [{"name": "...", "arguments": {...}}]
     """
-    if LLM_PROVIDER != "openai" or not OPENAI_API_KEY:
+    if LLM_PROVIDER != "groq" or not GROQ_API_KEY:
         return "", []
 
     try:
         from openai import OpenAI  # type: ignore
 
-        client = OpenAI(api_key=OPENAI_API_KEY)
+        client = OpenAI(
+            api_key=GROQ_API_KEY,
+            base_url="https://api.groq.com/openai/v1",
+        )
         response = client.chat.completions.create(
-            model=OPENAI_MODEL,
+            model=GROQ_MODEL,
             messages=messages,
             tools=_to_openai_tools(tool_schemas),
             tool_choice="auto",
