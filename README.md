@@ -1,0 +1,94 @@
+# ARIA Voice Agent
+
+ARIA is a voice-enabled personal AI agent that can manage a to-do list using tool calls and remember important user interactions across sessions.
+
+## What it does
+
+- Voice input → text (STT) and spoken replies (TTS)
+- Tool-based to-do management: add, update, delete, list
+- Long-term memory saved in SQLite, with optional semantic recall via Chroma + embeddings
+- A web UI that supports both typing and voice dictation
+
+## Project structure
+
+- `main.py`: terminal agent loop (voice input + spoken replies)
+- `frontend_server.py`: local web server (chat UI + to-do panel)
+- `web/index.html`: frontend (typing + voice dictation + speak replies)
+- `agent/`: agent loop + tool schemas + LLM provider adapters
+- `tools/`: todo + memory managers (SQLite) and vector memory index (Chroma)
+- `storage/`: databases + Chroma persistence
+
+## Quick start (web UI)
+
+1. Start the server:
+
+```bash
+cd "/Users/praveenkumar/Desktop/Voice Agent"
+.venv/bin/python frontend_server.py
+```
+
+2. Open:
+
+- `http://127.0.0.1:8000`
+
+3. Use:
+
+- Type in the input box and press **Send**
+- Click **Start Voice** to dictate (it converts speech to text and fills the input)
+- Toggle **Auto-send Voice** to send immediately or let you edit first
+- Toggle **Voice Reply** to enable/disable spoken replies in the browser
+
+## Quick start (terminal voice mode)
+
+```bash
+cd "/Users/praveenkumar/Desktop/Voice Agent"
+.venv/bin/python main.py
+```
+
+If your microphone is available, it listens and transcribes; otherwise it falls back to typed input.
+
+## Install dependencies
+
+This project uses a local virtual environment at `./.venv`.
+
+```bash
+cd "/Users/praveenkumar/Desktop/Voice Agent"
+python3 -m venv .venv
+.venv/bin/pip install --upgrade pip
+.venv/bin/pip install -r requirements.txt
+```
+
+### Microphone support (macOS)
+
+If installing `pyaudio` fails, install PortAudio first:
+
+```bash
+brew install portaudio
+CPPFLAGS='-I/opt/homebrew/include' LDFLAGS='-L/opt/homebrew/lib' .venv/bin/pip install pyaudio
+```
+
+## Environment variables
+
+Copy `.env.example` to `.env` and fill what you need.
+
+Key options:
+
+- `LLM_PROVIDER`: `local` (default) or `openai`
+- `OPENAI_API_KEY`, `OPENAI_MODEL`
+- `STT_PROVIDER`: `google_stt` (default) or `whisper_local`
+- `TTS_PROVIDER`: `pyttsx3` (default), `elevenlabs`, or `google_tts`
+- `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`
+- `EMBEDDING_PROVIDER`: `sentence_transformers` (default) or `openai`
+
+## Notes on voice performance
+
+- Browser voice is usually fastest because it uses the built-in Web Speech API.
+- Terminal voice depends on microphone + network (Google STT) or Whisper configuration.
+- For best results in browser: use Chrome/Edge and allow microphone permissions.
+
+## Troubleshooting
+
+- **“Voice Unsupported” in the web UI**: use Chrome or Edge; Safari often lacks Web Speech recognition.
+- **Mic permission blocked**: allow microphone access for `http://127.0.0.1:8000` in your browser settings.
+- **Port 8000 already in use**: stop the old server process or change the port in `frontend_server.py`.
+
