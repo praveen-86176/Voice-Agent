@@ -6,30 +6,36 @@ ARIA is a voice-enabled personal AI agent that can manage a to-do list using too
 
 - Voice input → text (STT) and spoken replies (TTS)
 - Tool-based to-do management: add, update, delete, list
-- Long-term memory saved in SQLite, with optional semantic recall via Chroma + embeddings
+- Long-term memory saved in SQLite, with semantic recall via Chroma + embeddings
 - A web UI that supports both typing and voice dictation
 
 ## Project structure
 
-- `main.py`: terminal agent loop (voice input + spoken replies)
-- `frontend_server.py`: local web server (chat UI + to-do panel)
-- `web/index.html`: frontend (typing + voice dictation + speak replies)
-- `agent/`: agent loop + tool schemas + LLM provider adapters
-- `tools/`: todo + memory managers (SQLite) and vector memory index (Chroma)
-- `storage/`: databases + Chroma persistence
+- `frontend_server.py`: Main web server (FastAPI) handling chat, memory, and to-do APIs
+- `main.py`: Terminal-based agent loop (microphone input + spoken replies)
+- `agent/`: Agent logic, tool schemas, and LLM provider (Groq)
+- `tools/`: Todo and memory managers (SQLite + Chroma)
+- `voice/`: Local STT (Google) and TTS (pyttsx3/ElevenLabs) modules
+- `web/`: Frontend source (index.html)
+- `storage/`: Local databases and vector index persistence
 
-## Quick start (web UI)
+## Quick start (Web UI)
 
-1. Start the server:
+1. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-```bash
-cd "/Users/praveenkumar/Desktop/Voice Agent"
-.venv/bin/python frontend_server.py
-```
+2. **Configure environment**:
+   Fill in your `GROQ_API_KEY` in the `.env` file.
 
-2. Open:
+3. **Start the server**:
+   ```bash
+   python frontend_server.py
+   ```
 
-- `http://127.0.0.1:8000`
+4. **Open**:
+   - `http://127.0.0.1:8000`
 
 3. Use:
 

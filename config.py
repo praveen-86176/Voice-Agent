@@ -18,14 +18,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 # Common Groq choices: llama-3.1-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 
-# STT: whisper_local | google_stt
-STT_PROVIDER = os.getenv("STT_PROVIDER", "google_stt")
 
-# TTS: elevenlabs | pyttsx3
-TTS_PROVIDER = os.getenv("TTS_PROVIDER", "pyttsx3")
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
-ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "")
-GOOGLE_TTS_LANG = os.getenv("GOOGLE_TTS_LANG", "en")
 
 # Memory backend: sqlite | json
 MEMORY_BACKEND = os.getenv("MEMORY_BACKEND", "sqlite")

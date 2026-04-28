@@ -4,127 +4,321 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ARIA Assistant</title>
+    <link rel="icon" href="data:," />
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap');
+      
       :root {
-        color-scheme: light dark;
+        --bg-color: #0f172a;
+        --panel-bg: rgba(30, 41, 59, 0.7);
+        --border-color: rgba(255, 255, 255, 0.1);
+        --primary: #6366f1;
+        --primary-hover: #4f46e5;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --user-msg: rgba(99, 102, 241, 0.2);
+        --aria-msg: rgba(16, 185, 129, 0.15);
       }
+      
       body {
         margin: 0;
-        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        background: #0b1020;
-        color: #f2f4ff;
+        font-family: 'Outfit', system-ui, sans-serif;
+        background: radial-gradient(circle at top left, #1e1b4b, var(--bg-color));
+        color: var(--text-main);
+        min-height: 100vh;
       }
+      
       .container {
-        max-width: 1100px;
-        margin: 24px auto;
-        padding: 0 16px;
+        max-width: 1200px;
+        margin: 40px auto;
+        padding: 0 20px;
       }
+      
       .grid {
         display: grid;
-        grid-template-columns: 1.5fr 1fr;
-        gap: 16px;
+        grid-template-columns: 1.6fr 1fr;
+        gap: 24px;
       }
+      
       .panel {
-        background: #121a33;
-        border: 1px solid #28365f;
-        border-radius: 14px;
-        padding: 16px;
+        background: var(--panel-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
       }
+      
       h1 {
         margin-top: 0;
-        font-size: 1.3rem;
+        font-size: 1.6rem;
+        font-weight: 500;
+        background: linear-gradient(to right, #818cf8, #34d399);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+        margin-bottom: 16px;
       }
+      
       #chat {
-        height: 420px;
+        flex: 1;
+        height: 400px;
         overflow-y: auto;
-        border: 1px solid #2f406f;
-        border-radius: 10px;
-        padding: 12px;
-        background: #0e1530;
-      }
-      .msg {
-        margin: 10px 0;
-        line-height: 1.45;
-      }
-      .user {
-        color: #8fd3ff;
-      }
-      .aria {
-        color: #c7ffbf;
-      }
-      .composer {
-        margin-top: 12px;
+        border-radius: 12px;
+        padding: 16px;
+        background: rgba(15, 23, 42, 0.5);
+        border: 1px solid var(--border-color);
         display: flex;
-        gap: 10px;
+        flex-direction: column;
+        gap: 12px;
+        scrollbar-width: thin;
+        scrollbar-color: var(--primary) transparent;
       }
+      
+      #chat::-webkit-scrollbar {
+        width: 6px;
+      }
+      #chat::-webkit-scrollbar-thumb {
+        background-color: var(--primary);
+        border-radius: 10px;
+      }
+      
+      .msg {
+        padding: 12px 16px;
+        border-radius: 14px;
+        max-width: 80%;
+        line-height: 1.5;
+        font-size: 0.95rem;
+        animation: fadeIn 0.3s ease-out forwards;
+      }
+      
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      
+      .user {
+        align-self: flex-end;
+        background: var(--user-msg);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        border-bottom-right-radius: 4px;
+      }
+      
+      .aria {
+        align-self: flex-start;
+        background: var(--aria-msg);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-bottom-left-radius: 4px;
+      }
+      
+      .composer {
+        margin-top: 16px;
+        display: flex;
+        gap: 12px;
+      }
+      
+      input {
+        flex: 1;
+        padding: 14px 18px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        background: rgba(15, 23, 42, 0.6);
+        color: var(--text-main);
+        font-family: inherit;
+        font-size: 1rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        outline: none;
+      }
+      
+      input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      }
+      
+      button {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 12px;
+        background: var(--primary);
+        color: white;
+        font-family: inherit;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      
+      button:hover:not(:disabled) {
+        background: var(--primary-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+      }
+      
+      button:active:not(:disabled) {
+        transform: translateY(0);
+      }
+      
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      
       .toolbar {
-        margin-top: 10px;
+        margin-top: 16px;
         display: flex;
         gap: 10px;
         flex-wrap: wrap;
       }
+      
+      .toolbar button {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        font-size: 0.85rem;
+        padding: 8px 14px;
+      }
+      
+      .toolbar button:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.1);
+        box-shadow: none;
+        transform: translateY(-1px);
+      }
+      
+      #mic.listening {
+        background: rgba(239, 68, 68, 0.2);
+        border-color: rgba(239, 68, 68, 0.5);
+        color: #fca5a5;
+        animation: pulse 1.5s infinite;
+      }
+      
+      @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+      }
+      
       .todos {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
+        margin-top: 16px;
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 8px;
       }
+      
       .todoRow {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 10px;
-        border: 1px solid #2f406f;
-        border-radius: 10px;
-        background: #0e1530;
+        gap: 12px;
+        padding: 14px;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.4);
+        transition: transform 0.2s, background 0.2s;
       }
+      
+      .todoRow:hover {
+        background: rgba(15, 23, 42, 0.7);
+        transform: translateX(4px);
+      }
+      
       .todoTitle {
         flex: 1;
+        font-weight: 400;
       }
+      
       .pill {
-        font-size: 12px;
-        padding: 4px 8px;
+        font-size: 0.75rem;
+        padding: 4px 10px;
         border-radius: 999px;
-        border: 1px solid #364b83;
-        opacity: 0.9;
+        border: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.05);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
+      
       .muted {
-        opacity: 0.8;
-        font-size: 13px;
+        color: var(--text-muted);
+        font-size: 0.9rem;
       }
-      .listening {
-        opacity: 0.9;
-        font-style: italic;
+      
+      #startOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.9);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.4s ease;
       }
-      input {
-        flex: 1;
-        padding: 12px;
-        border-radius: 8px;
-        border: 1px solid #364b83;
-        background: #121b3d;
-        color: #f2f4ff;
-      }
-      button {
-        padding: 12px 16px;
+      
+      #startSessionBtn {
+        font-size: 1.4rem;
+        padding: 20px 48px;
+        border-radius: 100px;
+        background: linear-gradient(135deg, var(--primary), #8b5cf6);
+        box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        letter-spacing: 0.5px;
         border: none;
-        border-radius: 8px;
-        background: #4b7cff;
-        color: white;
-        cursor: pointer;
       }
-      button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
+      
+      #startSessionBtn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 15px 40px rgba(99, 102, 241, 0.6);
+      }
+      
+      .todoRow button {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+      }
+      
+      .todoRow button:hover {
+        background: rgba(255, 255, 255, 0.15);
+      }
+      
+      .todoRow button.delete-btn {
+        background: rgba(239, 68, 68, 0.1);
+        color: #fca5a5;
+        border-color: rgba(239, 68, 68, 0.2);
+      }
+      
+      .todoRow button.delete-btn:hover {
+        background: rgba(239, 68, 68, 0.3);
+      }
+      
+      @media (max-width: 768px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .container {
+          margin: 20px auto;
+        }
       }
     </style>
   </head>
   <body>
+    <div id="startOverlay">
+      <button id="startSessionBtn">Tap to Start Session</button>
+    </div>
     <div class="container">
       <div class="grid">
         <div class="panel">
           <h1>ARIA Assistant</h1>
           <div id="chat"></div>
           <div class="composer">
-            <input id="message" placeholder="Type your message..." />
+            <input id="message" placeholder="Type your message..." autocomplete="off" />
             <button id="send">Send</button>
           </div>
           <div class="toolbar">
@@ -161,25 +355,14 @@
       let recognizing = false;
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       let recognition = null;
-      let liveTranscriptEl = null;
       let liveText = "";
       let liveSendTimer = null;
 
       function appendMessage(role, text) {
         const div = document.createElement("div");
         div.className = `msg ${role}`;
-        div.textContent = `${role === "user" ? "You" : "ARIA"}: ${text}`;
+        div.textContent = text;
         chat.appendChild(div);
-        chat.scrollTop = chat.scrollHeight;
-      }
-
-      function setLiveTranscript(text) {
-        if (!liveTranscriptEl) {
-          liveTranscriptEl = document.createElement("div");
-          liveTranscriptEl.className = "msg user";
-          chat.appendChild(liveTranscriptEl);
-        }
-        liveTranscriptEl.textContent = text ? `You (listening): ${text}` : "";
         chat.scrollTop = chat.scrollHeight;
       }
 
@@ -187,13 +370,14 @@
         if (!speakReplies || !("speechSynthesis" in window)) return;
         window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance(text);
-        utter.rate = 1;
+        utter.rate = 1.05;
         utter.pitch = 1;
         window.speechSynthesis.speak(utter);
       }
 
       async function sendMessage(overrideMessage) {
-        const message = (overrideMessage ?? input.value).trim();
+        const textToUse = typeof overrideMessage === "string" ? overrideMessage : input.value;
+        const message = textToUse.trim();
         if (!message) return;
         appendMessage("user", message);
         input.value = "";
@@ -221,12 +405,13 @@
           loadTodos();
         }
       }
+
       function renderTodos(todos) {
         todosEl.innerHTML = "";
         if (!todos || todos.length === 0) {
           const div = document.createElement("div");
           div.className = "muted";
-          div.textContent = "No tasks yet.";
+          div.textContent = "No tasks yet. Start adding some!";
           todosEl.appendChild(div);
           return;
         }
@@ -255,6 +440,7 @@
           };
 
           const delBtn = document.createElement("button");
+          delBtn.className = "delete-btn";
           delBtn.textContent = "Delete";
           delBtn.onclick = async () => {
             const ok = confirm(`Delete "${t.title}"?`);
@@ -297,7 +483,7 @@
         loadTodos();
       });
 
-      send.addEventListener("click", sendMessage);
+      send.addEventListener("click", () => sendMessage());
       input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") sendMessage();
       });
@@ -322,6 +508,15 @@
         }
       }
 
+      function stopMic() {
+        recognizing = false;
+        mic.textContent = "Start Voice";
+        mic.classList.remove("listening");
+        try {
+          recognition.stop();
+        } catch (_e) {}
+      }
+
       if (SpeechRecognition && navigator.mediaDevices?.getUserMedia) {
         recognition = new SpeechRecognition();
         recognition.lang = "en-US";
@@ -330,43 +525,33 @@
         recognition.continuous = true;
 
         recognition.onresult = (event) => {
-          let interim = "";
-          let finalText = "";
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const chunk = event.results[i]?.[0]?.transcript ?? "";
-            if (event.results[i].isFinal) finalText += chunk;
-            else interim += chunk;
+          let fullText = "";
+          for (let i = 0; i < event.results.length; i++) {
+            fullText += event.results[i][0].transcript;
           }
-          liveText = (finalText || interim).trim();
-          setLiveTranscript(liveText);
+          
+          liveText = fullText.trim();
           input.value = liveText;
 
-          if (autoSendVoice && finalText.trim()) {
-            // Debounce a bit to avoid double-sends when final comes in quickly.
+          if (autoSendVoice && liveText) {
+            // Wait 1.5 seconds of silence before auto-sending
             if (liveSendTimer) clearTimeout(liveSendTimer);
             liveSendTimer = setTimeout(() => {
-              const text = (finalText || liveText).trim();
-              if (text) sendMessage(text);
-              setLiveTranscript("");
-              liveTranscriptEl = null;
-            }, 250);
+              const textToSend = input.value.trim();
+              if (textToSend) {
+                stopMic();
+                sendMessage(textToSend);
+              }
+            }, 1500);
           }
         };
 
         recognition.onend = () => {
-          recognizing = false;
-          mic.textContent = "Start Voice";
-          // Auto-restart to keep voice always-ready.
-          if (recognizing) {
-            try {
-              recognition.start();
-            } catch (_e) {}
-          }
+          stopMic();
         };
 
         recognition.onerror = (event) => {
-          recognizing = false;
-          mic.textContent = "Start Voice";
+          stopMic();
           const reason = event?.error ? ` (${event.error})` : "";
           appendMessage("aria", `I couldn't hear clearly, please try again${reason}.`);
         };
@@ -377,17 +562,13 @@
             if (!ok) return;
             recognizing = true;
             mic.textContent = "Listening...";
+            mic.classList.add("listening");
+            input.value = ""; // Clear input box on start
             try {
               recognition.start();
             } catch (_e) {}
           } else {
-            recognizing = false;
-            mic.textContent = "Start Voice";
-            setLiveTranscript("");
-            liveTranscriptEl = null;
-            try {
-              recognition.stop();
-            } catch (_e) {}
+            stopMic();
           }
         });
       } else {
@@ -396,11 +577,19 @@
         appendMessage("aria", "Voice input needs Chrome or Edge with microphone permission.");
       }
 
-      const welcome = "Hi, I’m ARIA. What would you like to do today?";
-      appendMessage("aria", welcome);
-      speakText(welcome);
-      input.focus();
-      loadTodos();
+      const startOverlay = document.getElementById("startOverlay");
+      const startSessionBtn = document.getElementById("startSessionBtn");
+      
+      startSessionBtn.addEventListener("click", () => {
+        startOverlay.style.opacity = "0";
+        setTimeout(() => startOverlay.style.display = "none", 400); // Wait for fade out
+        
+        const welcome = "Hi, I’m ARIA. What would you like to do today?";
+        appendMessage("aria", welcome);
+        speakText(welcome);
+        input.focus();
+        loadTodos();
+      });
     </script>
   </body>
 </html>

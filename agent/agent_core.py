@@ -31,13 +31,14 @@ class AriAgent:
 
     def format_memory_injection(self, memories: List[Dict[str, Any]]) -> str:
         if not memories:
-            return "\n[MEMORY CONTEXT]: none"
+            return ""
         lines = [f"- ({m['memory_type']}/{m['importance']}) {m['content']}" for m in memories]
-        return "\n[MEMORY CONTEXT]:\n" + "\n".join(lines)
+        return "[MEMORY BLOCK]\n" + "\n".join(lines) + "\n[END MEMORY BLOCK]\n\n"
 
     def build_messages(self, system_prompt: str, memory_context: str, user_text: str) -> List[Dict[str, str]]:
+        full_system_prompt = f"{memory_context}{system_prompt}".strip()
         return [
-            {"role": "system", "content": system_prompt + memory_context},
+            {"role": "system", "content": full_system_prompt},
             *self.session_context,
             {"role": "user", "content": user_text},
         ]
@@ -96,6 +97,27 @@ class AriAgent:
             follow_up = self._handle_pending_action(raw)
             if follow_up:
                 return follow_up
+
+        # Support for multiple commands in a single query
+        parts = [p.strip() for p in re.split(r'\b(?:and|then)\b', lowered) if p.strip()]
+        if len(parts) > 1:
+            calls = []
+            for part in parts:
+                if any(p in part for p in ["add ", "remind me to", "i need to", "i want to", "i have to"]):
+                    title = self._extract_task_title(part)
+                    if title:
+                        calls.append(ToolCall(name="add_todo", arguments={"title": title, "due_date": self._extract_due_date(part), "priority": self._extract_priority(part)}))
+                elif any(p in part for p in ["mark", "complete", "done", "update task", "change "]):
+                    title = self._extract_task_title(part)
+                    if title:
+                        calls.append(ToolCall(name="update_todo", arguments={"task_name": title, "status": "done"}))
+                elif any(p in part for p in ["delete", "remove", "cancel"]):
+                    title = self._extract_task_title(part)
+                    if title:
+                        calls.append(ToolCall(name="delete_todo", arguments={"task_name": title, "confirmed": True}))
+            if calls:
+                return LLMResponse(tool_calls=calls)
+
 
         if lowered in {"hi", "hello", "hey", "good morning", "good evening"}:
             return LLMResponse(content="Hey, I’m here. Want me to manage a task or remember something important?")
@@ -162,7 +184,7 @@ class AriAgent:
                 ]
             )
 
-        if any(p in lowered for p in ["add ", "remind me to", "i need to"]):
+        if any(p in lowered for p in ["add ", "remind me to", "i need to", "i want to", "i have to"]):
             title = self._extract_task_title(raw)
             if not title:
                 return LLMResponse(content="What should I add to your list?")
@@ -230,7 +252,7 @@ class AriAgent:
         if lowered in {"yes", "no"}:
             return False
         # Basic heuristic: short imperative-like phrases are likely tasks.
-        return len(lowered.split()) <= 8
+        return len(lowered.split()) <= 15
 
     def _looks_like_memory_statement(self, lowered: str) -> bool:
         triggers = [
@@ -246,11 +268,21 @@ class AriAgent:
         return any(t in lowered for t in triggers)
 
     def _render_final_reply(self, messages: List[Dict[str, str]]) -> LLMResponse:
-        tool_msg = next((m for m in reversed(messages) if m["role"] == "tool"), None)
-        if not tool_msg:
+        # Find all tool messages that occurred after the last user message
+        tool_msgs = []
+        for m in reversed(messages):
+            if m["role"] == "user":
+                break
+            if m["role"] == "tool":
+                tool_msgs.insert(0, m)
+
+        if not tool_msgs:
             return LLMResponse(content="I’m ready when you are.")
 
-        payload = json.loads(tool_msg["content"])
+        if len(tool_msgs) > 1:
+            return LLMResponse(content=f"Done! I completed {len(tool_msgs)} tasks for you.")
+
+        payload = json.loads(tool_msgs[0]["content"])
         tool_name = payload.get("tool_name")
         result = payload.get("result")
 
@@ -297,6 +329,8 @@ class AriAgent:
             r"add\s+(.+)",
             r"remind me to\s+(.+)",
             r"i need to\s+(.+)",
+            r"i want to\s+(.+)",
+            r"i have to\s+(.+)",
             r"mark\s+(.+?)\s+as\s+(?:done|complete)",
             r"delete\s+(.+)",
             r"remove\s+(.+)",

@@ -1,147 +1,111 @@
-import json
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+import os
+from typing import Dict, List, Optional
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from agent.agent_core import AriAgent
 from agent.system_prompt import SYSTEM_PROMPT
 from agent.tool_schemas import TOOL_SCHEMAS
+from agent.function_router import FunctionRouter
 
-
-BASE_DIR = Path(__file__).resolve().parent
-UI_PATH = BASE_DIR / "web" / "index.html"
+app = FastAPI(title="ARIA Voice Agent API")
 agent = AriAgent()
+router = FunctionRouter()
 
+# Serve static files from the web directory
+# Since we only have index.html, we can just serve it manually at root
+@app.get("/", response_class=HTMLResponse)
+async def read_index():
+    with open("web/index.html", "r") as f:
+        return f.read()
 
-def process_message(user_text: str) -> str:
+class ChatRequest(BaseModel):
+    message: str
+
+class ChatResponse(BaseModel):
+    reply: str
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest):
+    user_text = request.message
+    if not user_text:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    # Inject Long-Term Memory Context
     relevant_memories = agent.recall_top_memories(user_text, top_k=3)
     memory_context = agent.format_memory_injection(relevant_memories)
+
+    # Build Message Payload
     messages = agent.build_messages(
         system_prompt=SYSTEM_PROMPT,
         memory_context=memory_context,
         user_text=user_text,
     )
+
+    # LLM Reasoning (with tool schema)
     response = agent.call_llm(messages, tools=TOOL_SCHEMAS)
+
+    # Tool Execution or Direct Reply
     if response.tool_calls:
         tool_messages = agent.execute_tool_calls(response.tool_calls)
         messages.extend(tool_messages)
+        # Note: In a real app, we might loop here if there are multiple tool steps
         final_response = agent.call_llm(messages).content
     else:
         final_response = response.content
+
+    # Update Session Context
     agent.update_session_context(user_text, final_response)
-    return final_response
+    
+    return ChatResponse(reply=final_response)
 
+@app.get("/api/todos")
+async def get_todos():
+    todos = router.list_todos()
+    return {"todos": todos}
 
-class AriaHandler(BaseHTTPRequestHandler):
-    def _read_json_body(self) -> Optional[Dict[str, Any]]:
-        content_length = int(self.headers.get("Content-Length", "0"))
-        body = self.rfile.read(content_length).decode("utf-8")
-        try:
-            return json.loads(body) if body else {}
-        except json.JSONDecodeError:
-            return None
+class AddTodoRequest(BaseModel):
+    title: str
+    due_date: Optional[str] = None
+    priority: Optional[str] = "medium"
 
-    def _send_json(self, payload: Dict[str, Any], status: int = 200) -> None:
-        body = json.dumps(payload).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+@app.post("/api/todos/add")
+async def add_todo(request: AddTodoRequest):
+    todo = router.add_todo(
+        title=request.title, 
+        due_date=request.due_date, 
+        priority=request.priority
+    )
+    return todo
 
-    def _send_html(self, content: str, status: int = 200) -> None:
-        body = content.encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+class UpdateTodoRequest(BaseModel):
+    task_id: int
+    status: str
 
-    def do_GET(self) -> None:
-        if self.path in {"/", "/index.html"}:
-            self._send_html(UI_PATH.read_text(encoding="utf-8"))
-            return
-        if self.path.startswith("/api/todos"):
-            todos = agent.router.list_todos(status="all", priority="all", due_today=False)
-            self._send_json({"todos": todos})
-            return
-        self._send_json({"error": "Not found"}, status=404)
+@app.post("/api/todos/update")
+async def update_todo(request: UpdateTodoRequest):
+    todo = router.update_todo(
+        task_id=request.task_id, 
+        status=request.status
+    )
+    if not todo:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    return todo
 
-    def do_POST(self) -> None:
-        if self.path == "/chat":
-            payload = self._read_json_body()
-            if payload is None:
-                self._send_json({"error": "Invalid JSON body"}, status=400)
-                return
+class DeleteTodoRequest(BaseModel):
+    task_id: int
 
-            user_text = str(payload.get("message", "")).strip()
-            if not user_text:
-                self._send_json({"reply": "I didn't quite catch that — could you repeat it?"})
-                return
-
-            reply = process_message(user_text)
-            self._send_json({"reply": reply})
-            return
-
-        if self.path == "/api/todos/update":
-            payload = self._read_json_body()
-            if payload is None:
-                self._send_json({"error": "Invalid JSON body"}, status=400)
-                return
-            updated = agent.router.update_todo(
-                task_id=payload.get("task_id"),
-                task_name=payload.get("task_name"),
-                status=payload.get("status"),
-                new_title=payload.get("new_title"),
-                due_date=payload.get("due_date"),
-                priority=payload.get("priority"),
-            )
-            self._send_json({"todo": updated})
-            return
-
-        if self.path == "/api/todos/delete":
-            payload = self._read_json_body()
-            if payload is None:
-                self._send_json({"error": "Invalid JSON body"}, status=400)
-                return
-            ok = agent.router.delete_todo(
-                task_id=payload.get("task_id"),
-                task_name=payload.get("task_name"),
-                confirmed=True,
-            )
-            self._send_json({"deleted": ok})
-            return
-
-        if self.path == "/api/todos/add":
-            payload = self._read_json_body()
-            if payload is None:
-                self._send_json({"error": "Invalid JSON body"}, status=400)
-                return
-            title = str(payload.get("title", "")).strip()
-            if not title:
-                self._send_json({"error": "title required"}, status=400)
-                return
-            todo = agent.router.add_todo(
-                title=title,
-                due_date=payload.get("due_date"),
-                priority=payload.get("priority", "medium"),
-            )
-            self._send_json({"todo": todo})
-            return
-
-        if self.path != "/chat":
-            self._send_json({"error": "Not found"}, status=404)
-            return
-
-    def log_message(self, format: str, *args: List[Any]) -> None:  # noqa: A003
-        return
-
-
-def run(host: str = "127.0.0.1", port: int = 8000) -> None:
-    server = ThreadingHTTPServer((host, port), AriaHandler)
-    print(f"ARIA web running at http://{host}:{port}")
-    server.serve_forever()
-
+@app.post("/api/todos/delete")
+async def delete_todo(request: DeleteTodoRequest):
+    success = router.delete_todo(task_id=request.task_id, confirmed=True)
+    if not success:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    return {"success": True}
 
 if __name__ == "__main__":
-    run()
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
